@@ -81,11 +81,11 @@ class Plugin:
         },
         {
             "id": "selected_groups",
-            "label": "📁 Channel Groups (comma-separated)",
-            "type": "string",
-            "default": "",
-            "placeholder": "Sports, News, Entertainment",
-            "help_text": "Specific channel groups to process, or leave empty for all groups.",
+            "label": "📁 Channel Group",
+            "type": "select",
+            "default": "all",
+            "help_text": "Select a specific channel group to process, or choose 'All Groups'. This list is populated from your existing Channel Groups in Dispatcharr.",
+            "options": [{"value": "all", "label": "All Groups"}],
         },
         {
             "id": "ignore_tags",
@@ -169,7 +169,31 @@ class Plugin:
         self.channel_stream_matches = []
         self.fuzzy_matcher = None
         
+        # Dynamically populate channel groups
+        self._update_channel_group_options()
+        
         LOGGER.info(f"[Stream-Mapparr] {self.name} Plugin v{self.version} initialized")
+
+    def _update_channel_group_options(self):
+        """Dynamically populates the 'selected_groups' field options."""
+        try:
+            # Find the 'selected_groups' field
+            for field in self.fields:
+                if field['id'] == 'selected_groups':
+                    groups = ChannelGroup.objects.all().order_by('name')
+                    options = [{"value": "all", "label": "All Groups"}]
+                    for group in groups:
+                        options.append({"value": group.name, "label": group.name})
+                    field['options'] = options
+                    LOGGER.info(f"[Stream-Mapparr] Loaded {len(groups)} channel groups for dropdown.")
+                    break
+        except Exception as e:
+            # This may run before migrations, so gracefully handle errors
+            LOGGER.warning(f"[Stream-Mapparr] Could not load channel groups for settings, using fallback: {e}")
+            for field in self.fields:
+                if field['id'] == 'selected_groups':
+                    field['options'] = [{"value": "all", "label": "All Groups"}]
+                    break
 
     def _initialize_fuzzy_matcher(self, match_threshold=85):
         """Initialize the fuzzy matcher with configured threshold."""
@@ -686,7 +710,7 @@ class Plugin:
                 return {"status": "error", "message": error}
             
             profile_name = settings.get("profile_name", "").strip()
-            selected_groups_str = settings.get("selected_groups", "").strip()
+            selected_group = settings.get("selected_groups", "all").strip()
             ignore_tags_str = settings.get("ignore_tags", "").strip()
             visible_channel_limit_str = settings.get("visible_channel_limit", "1")
             visible_channel_limit = int(visible_channel_limit_str) if visible_channel_limit_str else 1
@@ -768,16 +792,17 @@ class Plugin:
             logger.info(f"[Stream-Mapparr] Found {len(channels_in_profile)} channels in profile '{profile_name}'")
             
             # Filter by groups if specified
-            if selected_groups_str:
-                logger.info(f"[Stream-Mapparr] Filtering by groups: {selected_groups_str}")
-                selected_groups = [g.strip() for g in selected_groups_str.split(',') if g.strip()]
+            selected_groups = []
+            if selected_group and selected_group.lower() != 'all':
+                logger.info(f"[Stream-Mapparr] Filtering by group: {selected_group}")
+                selected_groups = [selected_group]
                 valid_group_ids = [group_name_to_id[name] for name in selected_groups if name in group_name_to_id]
                 
                 if not valid_group_ids:
                     available_groups = sorted(list(group_name_to_id.keys()))
                     return {
                         "status": "error",
-                        "message": f"None of the specified groups were found: {', '.join(selected_groups)}\n\nAvailable groups ({len(available_groups)} total):\n" + "\n".join(f"  • {g}" for g in available_groups)
+                        "message": f"The specified group was not found: {selected_group}\n\nAvailable groups ({len(available_groups)} total):\n" + "\n".join(f"  • {g}" for g in available_groups)
                     }
                 
                 # Filter channels by channel_group_id field
@@ -787,8 +812,8 @@ class Plugin:
                         filtered_channels.append(ch)
                 
                 channels_in_profile = filtered_channels
-                logger.info(f"[Stream-Mapparr] Filtered to {len(channels_in_profile)} channels in groups: {', '.join(selected_groups)}")
-                group_filter_info = f" in groups: {', '.join(selected_groups)}"
+                logger.info(f"[Stream-Mapparr] Filtered to {len(channels_in_profile)} channels in group: {selected_group}")
+                group_filter_info = f" in group: {selected_group}"
             else:
                 selected_groups = []
                 group_filter_info = " (all groups)"
