@@ -13,7 +13,7 @@ from datetime import datetime
 from django.utils import timezone
 
 # Django model imports
-from apps.channels.models import Channel, Stream, ChannelStream, ChannelProfileMembership
+from apps.channels.models import Channel, Stream, ChannelStream, ChannelProfileMembership, ChannelGroup
 
 # Import fuzzy matcher
 from .fuzzy_matcher import FuzzyMatcher
@@ -1231,10 +1231,41 @@ class Plugin:
                     except Exception as e:
                         logger.error(f"[Stream-Mapparr]   Failed to update channel '{channel_name}': {e}")
                 
-                # Log skipped channels
-                for channel in channels_not_updated:
-                    logger.info(f"[Stream-Mapparr]   Skipped channel '{channel['name']}' (exceeds limit of {visible_channel_limit})")
-                    channels_skipped += 1
+                # Try to bulk disable all channels that are not updated
+                logger.info(f"[Stream-Mapparr] Disabling {len(channels_not_updated)} unnecessary channels...")
+                try:
+                    bulk_disable_payload = [
+                        {"channel_id": channel['id'], "enabled": False}
+                        for channel in channels_not_updated
+                    ]
+                    
+                    self._patch_api_data(
+                        f"/api/channels/profiles/{profile_id}/channels/bulk-update/",
+                        token,
+                        bulk_disable_payload,
+                        settings,
+                        logger
+                    )
+                    logger.info(f"[Stream-Mapparr] Successfully disabled {len(channels_not_updated)} unnecessary channels")
+                    
+                except Exception as e:
+                    logger.error(f"[Stream-Mapparr] Failed to bulk disable unnecessary channels: {e}")
+                    logger.info("[Stream-Mapparr] Attempting to disable unnecessary channels individually...")
+                    
+                    # Fallback: disable channels that are not updated one by one
+                    for channel in channels_not_updated:
+                        try:
+                            self._patch_api_data(
+                                f"/api/channels/profiles/{profile_id}/channels/{channel['id']}/",
+                                token,
+                                {"enabled": False},
+                                settings,
+                                logger
+                            )
+                            logger.info(f"[Stream-Mapparr] Skipped & disabled unnecessary channel '{channel['name']}'")
+                            channels_skipped += 1
+                        except Exception as e2:
+                            logger.error(f"[Stream-Mapparr] Failed to disable unnecessary channel {channel['id']}: {e2}")
             
             logger.info(f"[Stream-Mapparr] [100%] Processing complete")
 
