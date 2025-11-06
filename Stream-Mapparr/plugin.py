@@ -13,7 +13,7 @@ from datetime import datetime
 from django.utils import timezone
 
 # Django model imports
-from apps.channels.models import Channel, Stream, ChannelStream, ChannelProfileMembership, ChannelGroup
+from apps.channels.models import Channel, Stream, ChannelStream, ChannelProfileMembership, ChannelGroup, ChannelProfile
 
 # Import fuzzy matcher
 from .fuzzy_matcher import FuzzyMatcher
@@ -74,10 +74,10 @@ class Plugin:
         {
             "id": "profile_name",
             "label": "📋 Profile Name",
-            "type": "string",
+            "type": "select",
             "default": "",
-            "placeholder": "Sports",
             "help_text": "*** Required Field *** - The name of an existing Channel Profile to process channels from.",
+            "options": [{"value": "", "label": "Select a profile..."}],
         },
         {
             "id": "selected_groups",
@@ -171,6 +171,7 @@ class Plugin:
         
         # Dynamically populate channel groups
         self._update_channel_group_options()
+        self._update_channel_profile_options()
         
         LOGGER.info(f"[Stream-Mapparr] {self.name} Plugin v{self.version} initialized")
 
@@ -193,6 +194,27 @@ class Plugin:
             for field in self.fields:
                 if field['id'] == 'selected_groups':
                     field['options'] = [{"value": "all", "label": "All Groups"}]
+                    break
+
+    def _update_channel_profile_options(self):
+        """Dynamically populates the 'profile_name' field options."""
+        try:
+            # Find the 'profile_name' field
+            for field in self.fields:
+                if field['id'] == 'profile_name':
+                    profiles = ChannelProfile.objects.all().order_by('name')
+                    options = [{"value": "", "label": "Select a profile..."}]
+                    for profile in profiles:
+                        options.append({"value": profile.name, "label": profile.name})
+                    field['options'] = options
+                    LOGGER.info(f"[Stream-Mapparr] Loaded {len(profiles)} channel profiles for dropdown.")
+                    break
+        except Exception as e:
+            # This may run before migrations, so gracefully handle errors
+            LOGGER.warning(f"[Stream-Mapparr] Could not load channel profiles for settings, using fallback: {e}")
+            for field in self.fields:
+                if field['id'] == 'profile_name':
+                    field['options'] = [{"value": "", "label": "Select a profile..."}]
                     break
 
     def _initialize_fuzzy_matcher(self, match_threshold=85):
