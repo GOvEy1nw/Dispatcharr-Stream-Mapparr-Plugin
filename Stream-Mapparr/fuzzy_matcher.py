@@ -20,8 +20,8 @@ LOGGER = logging.getLogger("plugins.fuzzy_matcher")
 # Note: All patterns are applied with re.IGNORECASE flag in normalize_name()
 HARDCODED_IGNORE_PATTERNS = [
     # Bracketed quality tags: [4K], [UHD], [FHD], [HD], [SD], [Unknown], [Unk], [Slow], [Dead]
-    r'\[(4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead)\]',
-    r'\[(?:4k|uhd|fhd|hd|sd|unknown|unk|slow|dead)\]',
+    r'\[(HEVC|4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead)\]',
+    r'\[(?:hevc|4k|uhd|fhd|hd|sd|unknown|unk|slow|dead)\]',
 
     # Single letter tags in parentheses: (A), (B), (C), etc.
     r'\([A-Z]\)',
@@ -30,19 +30,19 @@ HARDCODED_IGNORE_PATTERNS = [
     r'\s[Ee][Aa][Ss][Tt]',
 
     # Unbracketed quality tags in middle: " 4K ", " UHD ", " FHD ", " HD ", " SD ", etc.
-    r'\s(?:4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead|FD)\s',
+    r'\s(?:HEVC|4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead|FD)\s',
 
     # Unbracketed quality tags at end: " 4K", " UHD", " FHD", " HD", " SD", etc.
-    r'\s(?:4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead|FD)$',
+    r'\s(?:HEVC|4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead|FD)$',
 
     # Word boundary quality tags with optional colon: "4K:", "UHD:", "FHD:", "HD:", etc.
-    r'\b(?:4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead|FD):?\s',
+    r'\b(?:HEVC|4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead|FD):?\s',
 
     # Special tags
     r'\s\(CX\)',  # Cinemax tag
 
     # Parenthesized quality tags: (4K), (UHD), (FHD), (HD), (SD), (Unknown), (Unk), (Slow), (Dead), (Backup)
-    r'\s\((4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead|FD|Backup)\)',
+    r'\s\((HEVC|4K|UHD|FHD|HD|SD|Unknown|Unk|Slow|Dead|FD|Backup)\)',
 
     # Geographic prefixes
     r'\bUSA?:\s',  # "US:" or "USA:"
@@ -556,3 +556,4 @@ class FuzzyMatcher:
             parts.extend(quality_tags)
         
         return " ".join(parts)
+
