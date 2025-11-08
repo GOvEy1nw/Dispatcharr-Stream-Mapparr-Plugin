@@ -154,10 +154,11 @@ class Plugin:
     ]
     
     # Quality precedence order for channel tags
-    CHANNEL_QUALITY_TAG_ORDER = ["[4K]", "[UHD]", "[FHD]", "[HD]", "[SD]", "[Unknown]", "[Slow]", ""]
+    CHANNEL_QUALITY_TAG_ORDER = ["[HEVC]", "[4K]", "[UHD]", "[FHD]", "[HD]", "[SD]", "[Unknown]", "[Slow]", ""]
     
     # Quality precedence order for stream tags (brackets and parentheses)
     STREAM_QUALITY_ORDER = [
+        "[HEVC]",
         "[4K]", "(4K)", "4K", "[UHD]", "(UHD)", "UHD",
         "[FHD]", "(FHD)", "FHD",
         "[HD]", "(HD)", "HD", "(H)",
@@ -1922,3 +1923,4 @@ plugin_instance = Plugin()
 stream_mapparr = Plugin()
 
 STREAM_MAPPARR = Plugin()
+
